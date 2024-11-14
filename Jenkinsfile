@@ -15,7 +15,7 @@ pipeline {
         stage('Build Image') {
             steps {
                 script {
-                    // Login to OpenShift (use 'bat' for Windows)
+                    // Login to OpenShift
                     bat "oc login ${OPENSHIFT_SERVER} --token=${OPENSHIFT_TOKEN} --insecure-skip-tls-verify"
                     
                     // Switch to project
@@ -26,14 +26,17 @@ pipeline {
                     oc get imagestream flask-app || echo 'Image stream flask-app not found, skipping deletion'
                     oc delete imagestream flask-app || echo 'Failed to delete imagestream (flask-app), it may not exist'
                     """
-
+                    
                     // Create the image stream if it doesn't exist
                     bat "oc create imagestream flask-app || echo 'Image stream flask-app already exists'"
 
-                    // Delete build config if it exists
-                    bat "oc delete buildconfig flask-app || echo 'Failed to delete buildconfig (flask-app), it may not exist'"
-
-                    // Create a new build and trigger it
+                    // Check if the buildconfig exists and delete it if it does
+                    bat """
+                    oc get buildconfig flask-app || echo 'BuildConfig flask-app not found, skipping deletion'
+                    oc delete buildconfig flask-app || echo 'Failed to delete buildconfig (flask-app), it may not exist'
+                    """
+                    
+                    // Create a new build config and trigger the build
                     bat "oc new-build --binary --name=flask-app --strategy=docker"
                     bat "oc start-build flask-app --from-dir=. --follow"
                 }
