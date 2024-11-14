@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PROJECT_NAME = 'flask-app'
-        OPENSHIFT_SERVER = 'oc login --token=sha256~0tNkprYjyXVDmtS4NEqJL3eS1ZeGFvr-Ef10_4duKNE --server=https://api.cacheocpnode.cacheocp.com:6443'
+        OPENSHIFT_SERVER = 'https://api.cacheocpnode.cacheocp.com:6443'
         OPENSHIFT_TOKEN = credentials('openshift-token')  // Add token in Jenkins credentials
         GIT_REPO = 'https://github.com/shashank-1-1/flask-app.git'
     }
