@@ -31,14 +31,15 @@ pipeline {
                     bat "oc create imagestream flask-app || echo 'Image stream flask-app already exists'"
 
                     // Handle BuildConfig: Check if it exists, create it if it doesn't
-                    bat """
-                    oc get buildconfig flask-app || (
+                    def buildConfigExists = bat(script: "oc get buildconfig flask-app --ignore-not-found", returnStatus: true) == 0
+                    if (!buildConfigExists) {
                         echo 'BuildConfig flask-app not found, creating a new one'
-                        oc new-build --binary --name=flask-app --strategy=docker
-                    )
-                    """
+                        bat "oc new-build --binary --name=flask-app --strategy=docker"
+                    } else {
+                        echo 'BuildConfig flask-app already exists, skipping creation'
+                    }
 
-                    // Start the build
+                    // Start the build if BuildConfig exists
                     bat "oc start-build flask-app --from-dir=. --follow"
                 }
             }
