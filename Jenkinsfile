@@ -17,14 +17,15 @@ pipeline {
                 script {
                     // Login to OpenShift (use 'bat' for Windows)
                     bat "oc login ${OPENSHIFT_SERVER} --token=${OPENSHIFT_TOKEN} --insecure-skip-tls-verify"
+                    
                     // Switch to project
                     bat "oc project flask-app-project"
-                    // Build and push image to OpenShift registry
-                    bat "oc delete imagestream flask-app"
-                    bat "IF %ERRORLEVEL% NEQ 0 echo 'Failed to delete imagestream (flask-app), it may not exist'"
-                    bat "oc delete buildconfig flask-app
-                    bat "IF %ERRORLEVEL% NEQ 0 echo 'Failed to delete buildconfig (flask-app), it may not exist'"
-                
+                    
+                    // Delete existing image stream and build config if they exist
+                    bat "oc delete imagestream flask-app || echo 'Failed to delete imagestream (flask-app), it may not exist'"
+                    bat "oc delete buildconfig flask-app || echo 'Failed to delete buildconfig (flask-app), it may not exist'"
+                    
+                    // Create a new build and trigger it
                     bat "oc new-build --binary --name=flask-app --strategy=docker"
                     bat "oc start-build flask-app --from-dir=. --follow"
                 }
@@ -43,6 +44,7 @@ pipeline {
         stage('Verify Deployment') {
             steps {
                 script {
+                    // Wait for rollout to complete
                     bat "oc rollout status dc/flask-app"
                 }
             }
