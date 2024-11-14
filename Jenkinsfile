@@ -21,11 +21,16 @@ pipeline {
                     // Switch to project
                     bat "oc project flask-app-project"
                     
-                    // Delete existing image stream if exists or create a new one
-                    bat "oc delete imagestream flask-app || echo 'Failed to delete imagestream (flask-app), it may not exist'"
-                    bat "oc create imagestream flask-app || echo 'Image stream flask-app already exists or failed to create'"
+                    // Check if the image stream exists before attempting deletion
+                    bat """
+                    oc get imagestream flask-app || echo 'Image stream flask-app not found, skipping deletion'
+                    oc delete imagestream flask-app || echo 'Failed to delete imagestream (flask-app), it may not exist'
+                    """
 
-                    // Delete build config if exists
+                    // Create the image stream if it doesn't exist
+                    bat "oc create imagestream flask-app || echo 'Image stream flask-app already exists'"
+
+                    // Delete build config if it exists
                     bat "oc delete buildconfig flask-app || echo 'Failed to delete buildconfig (flask-app), it may not exist'"
 
                     // Create a new build and trigger it
