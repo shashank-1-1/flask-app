@@ -3,7 +3,7 @@ pipeline {
     environment {
         PROJECT_NAME = 'flask-app'
         OPENSHIFT_SERVER = 'https://api.cacheocpnode.cacheocp.com:6443'
-        OPENSHIFT_TOKEN = credentials('openshift-token')  // Add token in Jenkins credentials
+        OPENSHIFT_TOKEN = credentials('openshift-token')  // Make sure you have a Jenkins credential for OpenShift Token
         GIT_REPO = 'https://github.com/shashank-1-1/flask-app.git'
     }
     stages {
@@ -18,26 +18,27 @@ pipeline {
                     // Login to OpenShift
                     bat "oc login ${OPENSHIFT_SERVER} --token=${OPENSHIFT_TOKEN} --insecure-skip-tls-verify"
                     
-                    // Switch to project
+                    // Switch to the OpenShift project
                     bat "oc project flask-app-project"
                     
-                    // Check if the image stream exists before attempting deletion
+                    // Handle ImageStream: Delete if it exists, otherwise create a new one
                     bat """
                     oc get imagestream flask-app || echo 'Image stream flask-app not found, skipping deletion'
                     oc delete imagestream flask-app || echo 'Failed to delete imagestream (flask-app), it may not exist'
                     """
                     
-                    // Create the image stream if it doesn't exist
+                    // Create the ImageStream if it doesn't exist
                     bat "oc create imagestream flask-app || echo 'Image stream flask-app already exists'"
 
-                    // Check if the buildconfig exists and delete it if it does
+                    // Handle BuildConfig: Check if it exists, create it if it doesn't
                     bat """
-                    oc get buildconfig flask-app || echo 'BuildConfig flask-app not found, skipping deletion'
-                    oc delete buildconfig flask-app || echo 'Failed to delete buildconfig (flask-app), it may not exist'
+                    oc get buildconfig flask-app || (
+                        echo 'BuildConfig flask-app not found, creating a new one'
+                        oc new-build --binary --name=flask-app --strategy=docker
+                    )
                     """
-                    
-                    // Create a new build config and trigger the build
-                    bat "oc new-build --binary --name=flask-app --strategy=docker"
+
+                    // Start the build
                     bat "oc start-build flask-app --from-dir=. --follow"
                 }
             }
@@ -45,7 +46,7 @@ pipeline {
         stage('Deploy to OpenShift') {
             steps {
                 script {
-                    // Apply DeploymentConfig, Service, and Route
+                    // Apply DeploymentConfig, Service, and Route if required
                     bat "oc apply -f openshift/deploymentconfig.yaml"
                     bat "oc apply -f openshift/service.yaml"
                     bat "oc apply -f openshift/route.yaml"
